@@ -5,7 +5,8 @@ import pandas as pd
 import plotly.express as px
 
 # Load your clean CSV
-df = pd.read_csv("assets/clean_telemetry_718gt4.csv")
+df = pd.read_csv("assets/clean_telemetry_718gt4.csv", skiprows=[1])
+units = pd.read_csv("assets/clean_telemetry_718gt4.csv", nrows=1).iloc[0].to_dict()
 numeric_df = df.select_dtypes(include='number')
 valid_columns = [col for col in numeric_df.columns if not col.startswith("Unnamed")]
 
@@ -20,8 +21,8 @@ app.layout = dbc.Container([
         dbc.Col([
             dcc.Dropdown(
                 id='column-dropdown',
-                options=[{'label': col, 'value': col} for col in valid_columns],
-                value='Throttle',
+                options=[{'label': f'{col} ({units[col]})', 'value': col} for col in valid_columns],
+                value=valid_columns[0],
                 clearable=False
             ),
             html.Div(id='summary-output', className="mt-3")
@@ -41,15 +42,16 @@ app.layout = dbc.Container([
 def update_dashboard(column):
     series = numeric_df[column]
     stats = series.describe()
+    unit = units.get(column, '')
 
-    fig = px.line(df, x='Time', y=column, title=f'{column} Over Time')
+    fig = px.line(df, x='Time', y=column, title=f'{column} Over Time ({unit})')
     fig.update_layout(margin=dict(l=0, r=0, t=40, b=0))
 
     summary = html.Ul([
-        html.Li(f"Mean: {stats['mean']:.3f}"),
-        html.Li(f"Min: {stats['min']:.3f}"),
-        html.Li(f"Max: {stats['max']:.3f}"),
-        html.Li(f"Std Dev: {stats['std']:.3f}"),
+        html.Li(f"Mean: {stats['mean']:.3f} {unit}"),
+        html.Li(f"Min: {stats['min']:.3f} {unit}"),
+        html.Li(f"Max: {stats['max']:.3f} {unit}"),
+        html.Li(f"Std Dev: {stats['std']:.3f} {unit}"),
         html.Li(f"Samples: {int(stats['count'])}")
     ])
     return summary, fig
